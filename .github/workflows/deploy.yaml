@@ -13,7 +13,6 @@ ECR_REGISTRY: 324621154851.dkr.ecr.ap-south-1.amazonaws.com
 jobs:
 build-test-scan-deploy:
 
-```
 runs-on: ubuntu-latest
 
 steps:
@@ -94,4 +93,4 @@ steps:
     git commit -m "Update image tag to ${{ github.sha }}" || echo "No changes"
 
     git push
-```
+

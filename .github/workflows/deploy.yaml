@@ -1,4 +1,4 @@
-name: Test Workflow
+name: CI-CD-Pipeline
 
 on:
   push:
@@ -10,8 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Say Hello
-        run: echo "Workflow is working!"
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run Tests
+        run: pytest -v

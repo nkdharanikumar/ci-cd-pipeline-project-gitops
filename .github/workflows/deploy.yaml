@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  test:
+  test-and-build:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,3 +24,7 @@ jobs:
 
       - name: Run Tests
         run: pytest -v
+
+      - name: Build Docker Image
+        run: |
+          docker build -t flask-cicd:test .

@@ -1,73 +1,66 @@
 name: CI-CD-Pipeline
 
 on:
-push:
-branches:
-- main
+  push:
+    branches:
+      - main
 
 env:
-AWS_REGION: ${{ secrets.AWS_REGION }}
-ECR_REPOSITORY: flask-cicd
-ECR_REGISTRY: 324621154851.dkr.ecr.ap-south-1.amazonaws.com
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY: flask-cicd
+  ECR_REGISTRY: 324621154851.dkr.ecr.ap-south-1.amazonaws.com
 
 jobs:
-test-build-scan-push:
-runs-on: ubuntu-latest
+  test-build-scan-push:
+    runs-on: ubuntu-latest
 
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-steps:
-  - name: Checkout Code
-    uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-  - name: Setup Python
-    uses: actions/setup-python@v5
-    with:
-      python-version: "3.11"
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
 
-  - name: Install Dependencies
-    run: |
-      pip install -r requirements.txt
-      pip install pytest
+      - name: Run Unit Tests
+        run: |
+          pytest -v
 
-  - name: Run Unit Tests
-    run: |
-      pytest -v
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-  - name: Configure AWS Credentials
-    uses: aws-actions/configure-aws-credentials@v4
-    with:
-      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      aws-region: ${{ secrets.AWS_REGION }}
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
 
-  - name: Login to Amazon ECR
-    uses: aws-actions/amazon-ecr-login@v2
+      - name: Build Docker Image
+        run: |
+          docker build -t flask-cicd:${{ github.sha }} .
 
-  - name: Build Docker Image
-    run: |
-      docker build -t flask-cicd:${{ github.sha }} .
+      - name: Install Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget
+          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.65.0_Linux-64bit.deb
+          sudo dpkg -i trivy_0.65.0_Linux-64bit.deb
 
-  - name: Install Trivy
-    run: |
-      sudo apt-get update
-      sudo apt-get install -y wget
-      wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.65.0_Linux-64bit.deb
-      sudo dpkg -i trivy_0.65.0_Linux-64bit.deb
+      - name: Security Scan
+        run: |
+          trivy image --severity HIGH,CRITICAL --exit-code 1 flask-cicd:${{ github.sha }}
 
-  - name: Security Scan
-    run: |
-      trivy image \
-        --severity HIGH,CRITICAL \
-        --exit-code 1 \
-        flask-cicd:${{ github.sha }}
+      - name: Tag Docker Image
+        run: |
+          docker tag flask-cicd:${{ github.sha }} $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
 
-  - name: Tag Docker Image
-    run: |
-      docker tag flask-cicd:${{ github.sha }} \
-      $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
-
-  - name: Push Docker Image
-    run: |
-      docker push \
-      $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
-
+      - name: Push Docker Image
+        run: |
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}

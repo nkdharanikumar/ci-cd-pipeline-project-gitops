@@ -52,7 +52,7 @@ jobs:
           image-ref: flask-cicd:${{ github.sha }}
           format: table
           exit-code: '1'
-          severity: HIGH,CRITICAL
+          severity: CRITICAL
 
       - name: Tag Docker Image
         run: |

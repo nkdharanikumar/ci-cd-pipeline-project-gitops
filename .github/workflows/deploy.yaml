@@ -84,4 +84,9 @@ jobs:
 
           git commit -m "Update image tag to ${{ github.sha }}" || echo "No changes"
 
+          git remote set-url origin https://x-access-token:${{ secrets.GITOPS_TOKEN }}@github.com/nkdharanikumar/gitops-repo.git
+
+          
+          
+
           git push origin main

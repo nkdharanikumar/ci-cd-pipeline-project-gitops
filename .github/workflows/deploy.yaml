@@ -11,7 +11,7 @@ env:
   ECR_REGISTRY: 324621154851.dkr.ecr.ap-south-1.amazonaws.com
 
 jobs:
-  test-build-scan-push:
+  test-build-scan-push-gitops:
     runs-on: ubuntu-latest
 
     steps:
@@ -63,3 +63,25 @@ jobs:
         run: |
           docker push \
           $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
+
+      - name: Clone GitOps Repository
+        run: |
+          git clone https://x-access-token:$\{\{ secrets.GITOPS_TOKEN }}@github.com/nkdharanikumar/gitops-repo.git
+
+      - name: Update Deployment Manifest
+        run: |
+          sed -i "s|image:.*|image: $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}|g" \
+          gitops-repo/k8s/deployment.yaml
+
+      - name: Commit and Push Changes
+        run: |
+          cd gitops-repo
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add .
+
+          git commit -m "Update image tag to ${{ github.sha }}" || echo "No changes"
+
+          git push
